@@ -166,6 +166,9 @@ GenericFIFO<short>  g_plotSpeechInFifoAfterAGC(PLOT_BUF_MULTIPLIER*WAVEFORM_PLOT
 // Raw mic samples for the TX level meter, written directly from the sound
 // card callback (OnTxInAudioData_()) alongside the TX pipeline's own input.
 GenericFIFO<short>  g_levelMeterTxRawFifo(8*LEVEL_METER_TX_RAW_BUF_MAX);
+// The same for a file played in place of the mic (e.g. the voice keyer),
+// written by the TX pipeline as the file is read.
+GenericFIFO<short>  g_levelMeterTxVkFifo(8*LEVEL_METER_TX_RAW_BUF_MAX);
 
 // Soundcard config
 std::atomic<int>         g_nSoundCards;
@@ -2404,11 +2407,16 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
         // Level meter, TX: peak level of the raw mic audio, read from the
         // sound card callback rather than the TX pipeline (whose input
         // arrives in bursts paced by the modem's frame size). PPM-style
-        // ballistics: instant attack, constant dB/sec decay.
-        int available = g_levelMeterTxRawFifo.numUsed();
+        // ballistics: instant attack, constant dB/sec decay. While a file
+        // plays in place of the mic (e.g. the voice keyer), the file's level
+        // is shown instead.
+        bool playingFile = g_playFileToMicIn.load(std::memory_order_acquire);
+        GenericFIFO<short>& levelFifo = playingFile ? g_levelMeterTxVkFifo : g_levelMeterTxRawFifo;
+        (playingFile ? g_levelMeterTxRawFifo : g_levelMeterTxVkFifo).reset();
+        int available = levelFifo.numUsed();
         int toRead = std::min(available, LEVEL_METER_TX_RAW_BUF_MAX);
         int maxSpeechIn = 0;
-        if (toRead > 0 && g_levelMeterTxRawFifo.read(speechInRawSamplesTxLevel, toRead) == 0)
+        if (toRead > 0 && levelFifo.read(speechInRawSamplesTxLevel, toRead) == 0)
         {
             for (int i = 0; i < toRead; i++)
             {
@@ -2442,9 +2450,11 @@ void MainFrame::OnTimer(wxTimerEvent &evt)
     }
     else if (timerId == ID_TIMER_LEVEL_METER_TX)
     {
-        // Not transmitting: discard what the mic callback captured so the
-        // next transmission doesn't start by displaying stale audio.
+        // Not transmitting: discard what the mic callback (or a file playing
+        // to the mic) captured so the next transmission doesn't start by
+        // displaying stale audio.
         g_levelMeterTxRawFifo.reset();
+        g_levelMeterTxVkFifo.reset();
     }
 }
 #endif

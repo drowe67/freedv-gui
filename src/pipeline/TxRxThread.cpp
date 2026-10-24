@@ -47,6 +47,7 @@ using namespace std::chrono_literals;
 #include "paCallbackData.h"
 
 #include "PlaybackStep.h"
+#include "FifoWriteStep.h"
 #include "EitherOrStep.h"
 #include "RNNoiseStep.h"
 #include "EqualizerStep.h"
@@ -87,6 +88,7 @@ extern std::atomic<bool> g_tx;
 extern std::atomic<int> g_dump_fifo_state;
 extern std::atomic<bool> endingTx;
 extern std::atomic<bool> g_playFileToMicIn;
+extern GenericFIFO<short> g_levelMeterTxVkFifo;
 extern std::atomic<int> g_sfTxFs;
 extern std::atomic<bool> g_loopPlayFileToMicIn;
 extern std::atomic<bool> g_loopPlayFileFromRadio;
@@ -185,6 +187,11 @@ void TxRxThread::initializePipeline_()
             }
             );
         eitherOrPlayMicIn->appendPipelineStep(playMicIn);
+
+        // While a file plays in place of the mic (e.g. the voice keyer), the
+        // TX level meter shows the file's own level, before any processing.
+        auto levelMeterVkTap = new TapStep(inputSampleRate_, new FifoWriteStep(inputSampleRate_, &g_levelMeterTxVkFifo));
+        eitherOrPlayMicIn->appendPipelineStep(levelMeterVkTap);
         
         auto eitherOrPlayStep = new EitherOrStep(
             +[]() FREEDV_NONBLOCKING { return g_playFileToMicIn.load(std::memory_order_acquire) && (g_sfPlayFile.load(std::memory_order_acquire) != NULL); },

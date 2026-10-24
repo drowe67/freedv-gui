@@ -98,6 +98,7 @@ float g_sig_pwr_av = 0.0f;
 GenericFIFO<float> g_avmag(2000);
 GenericFIFO<short> g_plotSpeechInFifoBeforeEQ(8000);
 GenericFIFO<short> g_plotSpeechInFifoAfterAGC(8000);
+GenericFIFO<short> g_levelMeterTxVkFifo(8000);
 GenericFIFO<short> g_plotDemodInFifo(8000);
 GenericFIFO<short> g_plotSpeechOutFifo(8000);
 
