@@ -214,8 +214,10 @@ of a scenario can't be done, that part is left out and the rest still runs.
   installs VAC Lite and VB-Cable (`setup-windows-audio-drivers`) and runs
   `run_tests.py` with one retry.
 
-All of these only run on pushes to master and the `v*-dev` branches, on manual
-runs, and on pushes whose commit message says `[full ci]`.
+Pull requests get one configuration per platform: on Linux, ubuntu-26.04
+without sanitizers; on macOS, without sanitizers; on Windows, x86_64. The rest
+(each sanitizer, the coverage job) run on pushes to master and the `v*-dev`
+branches, on manual runs, and on pull requests labelled `full-ci`.
 
 ## Writing a scenario
 
